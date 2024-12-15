@@ -2,48 +2,41 @@ name: macOS Build
 
 on:
   push:
-    branches: [ main, master ]  # Including both main and master to ensure it works
+    branches: [ master ]  # Using master since that's what I see in your branch name
   pull_request:
-    branches: [ main, master ]
+    branches: [ master ]
 
 jobs:
-  build:
+  macOS-build:
     runs-on: macos-latest
-    
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
       
-    - name: Install Dependencies
-      run: |
-        brew update
-        # Installing core dependencies that nsxiv needs on macOS
-        brew install imlib2 libx11 libxft libexif
+      - name: Install Dependencies
+        run: |
+          brew update
+          brew install imlib2 libx11 libxft libexif
         
-    - name: Build
-      run: |
-        # First do a clean build
-        make clean
-        
-        # Build with specific flags needed for macOS
-        # Note: We disable inotify as it's not available on macOS
-        make -s OPT_DEP_DEFAULT=1 HAVE_INOTIFY=0 \
-          CPPFLAGS="-I/opt/homebrew/include -I/opt/homebrew/include/freetype2" \
-          LDLIBS="-L/opt/homebrew/lib"
+      - name: Build
+        run: |
+          make clean
+          make -s OPT_DEP_DEFAULT=1 HAVE_INOTIFY=0 \
+            CPPFLAGS="-I/opt/homebrew/include -I/opt/homebrew/include/freetype2" \
+            LDLIBS="-L/opt/homebrew/lib"
           
-    - name: Prepare Release Package
-      run: |
-        # Create a directory for our release files
-        mkdir -p release/nsxiv
-        # Copy the compiled binary
-        cp nsxiv release/nsxiv/
-        # Copy documentation and license
-        cp README.md LICENSE release/nsxiv/
-        # Create an archive
-        cd release
-        tar czf nsxiv-macos.tar.gz nsxiv/
-        
-    - name: Upload Build Artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: nsxiv-macos
-        path: release/nsxiv-macos.tar.gz
+      - name: Package Binary
+        run: |
+          # Create a directory for the release
+          mkdir -p release
+          # Copy the binary and make it executable
+          cp nsxiv release/
+          chmod +x release/nsxiv
+          # Add documentation
+          cp README.md LICENSE release/
+          
+      - name: Upload Binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: nsxiv-macos
+          path: release/
+          retention-days: 90
